@@ -1,0 +1,48 @@
+
+
+import options, asyncdispatch, times, strutils, os, tables
+
+import httpbeast, limdb, libsha/sha256
+
+proc hashToken() =
+  let token = getEnv("NIMSHORT_TOKEN")
+  if token == "":
+    return
+  echo sha256hexdigest(token)
+  quit(3)
+
+hashToken()
+
+let db = initDatabase("nimshortdb", (url: string))
+let hash = getEnv("NIMSHORT_AUTH_HASH")
+
+proc onRequest(req: Request): Future[void] =
+  let timestamp = now()
+  let httpMethod = req.httpMethod.get
+  let path = req.path.get
+  echo "%s %s %s" % [$timestamp, $httpMethod, $path]
+  case httpMethod:
+  of HttpHead:
+    if path notin db.url:
+      req.send(Http404, "Not found")
+    else:
+      req.send(Http200, "")
+  of HttpGet:
+    if path notin db.url:
+      req.send(Http404, "Not found")
+    else:
+      req.send(Http301, "", "Location: $1" % db.url[path])
+  of HttpPut:
+    let body = req.body.get
+    let headers = req.headers.get
+    if "bearer" notin headers.table[]:
+      req.send(Http401, "Bearer header required")
+    else:
+      if sha256hexdigest(headers["bearer"]) == hash:
+        db.url[path] = body
+        req.send(Http201, "Shortened $1 to $2" % [body, path])
+  else:
+    req.send(Http400, "PUT /myShort with URL as body")
+
+httpbeast.run(onRequest)
+
