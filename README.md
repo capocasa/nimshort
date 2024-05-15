@@ -11,9 +11,7 @@ $ nimshort
 abc123
 ```
 
-3. 
-
-Start with with systemd.
+3. Start with with systemd.
 
 ```s
 # /etc/systemd/system/nimshort.target
@@ -47,7 +45,15 @@ $ systemctl enable nimshort
 
 4. Proxy with nginx
 
+
 ```
+# /etc/nginx/sites-available/short.url
+server {
+  server_name capo.casa;
+  listen 80;
+  listen [::]:80;
+  return 301 https://$host$request_uri;
+}
 server {
   server_name short.url;
   listen 443 ssl;
@@ -74,12 +80,19 @@ ey.pem;
 }
 ```
 
+```
+$ certbot -d short.url --nginx certonly
+$ ln -s /etc/nginx/sites-available/short.url /etc/nginx/sites-enabled
+$ nginx -t
+$ systemctl reload nginx
+```
+
 5. Shorten URLs
 
 ```
 curl -H 'Auth: Bearer mysecuritytoken' -XPUT -d "https://reall.long.url" https://capo.casa/myshort
+```
 
 Note you provide your own myshort url component.
 
 
-```
