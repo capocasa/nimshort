@@ -11,7 +11,7 @@ bin           = @["nimshort"]
 
 requires "nim >= 2.0.0"
 requires "limdb"
-requires "httpbeast"
+requires "httpbeast#master"
 requires "libsha"
 
 
